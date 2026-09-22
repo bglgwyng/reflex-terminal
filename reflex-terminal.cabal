@@ -35,10 +35,18 @@ library
     Reflex.Terminal.Rect
     Reflex.Terminal.Style
 
+  other-modules:
+    Reflex.Terminal.Prelude
+
+  other-extensions:
+    TemplateHaskell
+
   build-depends:
     ansi-terminal,
     base ^>=4.20.2.0,
+    lens,
     mtl,
+    template-haskell,
     text ^>=2.1.4,
     wcwidth,
 

@@ -1,7 +1,5 @@
 module Reflex.Terminal.Style where
 
-
-
 -- data Style = Style
 --   { foregroundColor :: (Color, ColorIntensity),
 --     background :: (Color, ColorIntensity),

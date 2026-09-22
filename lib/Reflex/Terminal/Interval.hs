@@ -1,8 +1,14 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Reflex.Terminal.Interval where
 
-type Interval a = (a, a)
+import Reflex.Terminal.Prelude
+
+newtype Interval a = Interval (a, a) deriving (Show, Eq)
+
+makeWrapped 'Interval
 
 data Intersection a
   = Before
@@ -18,28 +24,28 @@ deriving instance (Eq a) => Eq (Intersection a)
 
 -- | Classify the first half-open interval relative to the second.
 --
--- >>> intersection @Int (0, 2) (2, 4)
+-- >>> intersection @Int (Interval (0, 2)) (Interval (2, 4))
 -- Before
--- >>> intersection @Int (0, 3) (2, 4)
--- OverlapsLeft (2,3)
--- >>> intersection @Int (0, 4) (1, 3)
+-- >>> intersection @Int (Interval (0, 3)) (Interval (2, 4))
+-- OverlapsLeft (Interval (2,3))
+-- >>> intersection @Int (Interval (0, 4)) (Interval (1, 3))
 -- Contains
--- >>> intersection @Int (1, 3) (0, 4)
+-- >>> intersection @Int (Interval (1, 3)) (Interval (0, 4))
 -- ContainedBy
--- >>> intersection @Int (2, 5) (1, 4)
--- OverlapsRight (2,4)
--- >>> intersection @Int (4, 6) (1, 4)
+-- >>> intersection @Int (Interval (2, 5)) (Interval (1, 4))
+-- OverlapsRight (Interval (2,4))
+-- >>> intersection @Int (Interval (4, 6)) (Interval (1, 4))
 -- After
 intersection :: (Ord a) => Interval a -> Interval a -> Intersection a
-intersection (start, end) (otherStart, otherEnd)
+intersection (Interval (start, end)) (Interval (otherStart, otherEnd))
   | end <= otherStart = Before
   | start >= otherEnd = After
   | start <= otherStart && end >= otherEnd = Contains
   | start >= otherStart && end <= otherEnd = ContainedBy
   | start < otherStart =
-      OverlapsLeft (otherStart, end)
+      OverlapsLeft (Interval (otherStart, end))
   | otherwise =
-      OverlapsRight (start, otherEnd)
+      OverlapsRight (Interval (start, otherEnd))
 
-size :: (Num a) => Interval a -> a
-size (start, end) = end - start
+instance (Num a) => HasField "size" (Interval a) a where
+  getField (Interval (start, end)) = end - start

@@ -1,29 +1,47 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Reflex.Terminal.Rect where
 
-data Rect = Rect
-  { top :: Int,
-    left :: Int,
-    height :: Int,
-    width :: Int
+import Control.Lens.Internal.FieldTH (LensRules (_fieldToDef), makeFieldOptics)
+import Language.Haskell.TH
+import Reflex.Terminal.Interval
+import Reflex.Terminal.Prelude
+
+data Rect a = Rect
+  { top :: a,
+    left :: a,
+    height :: a,
+    width :: a
   }
 
-bottom :: Rect -> Int
-bottom rect = rect.top + rect.height
+makeLenses' 'Rect
 
-right :: Rect -> Int
-right rect = rect.left + rect.width
+xInterval :: (Num a) => Lens' (Rect a) (Interval a)
+xInterval =
+  lens
+    (\rect -> Interval (rect ^. left, rect ^. left + rect ^. width))
+    (\rect (Interval (start, end)) -> rect & left .~ start & width .~ end - start)
 
-fromSize :: (Int, Int) -> Rect
-fromSize (height, width) = Rect {top = 0, left = 0, height, width}
+yInterval :: (Num a) => Lens' (Rect a) (Interval a)
+yInterval =
+  lens
+    (\rect -> Interval (rect ^. top, rect ^. top + rect ^. height))
+    (\rect (Interval (start, end)) -> rect & top .~ start & height .~ end - start)
 
-translateY :: Int -> Rect -> Rect
-translateY dy rect = rect {top = rect.top + dy}
+translateX :: (Num a) => a -> Rect a -> Rect a
+translateX dx rect =
+  rect
+    & xInterval
+    . _Wrapped
+    . _1
+    %~ (+ dx)
+    & xInterval
+    . _Wrapped
+    . _2
+    %~ (+ dx)
 
-translateX :: Int -> Int -> Rect
-translateX height width = Rect {top = 0, left = 0, height, width}
+bottom :: (Num a) => Rect a -> a
+bottom rect = rect ^. top + rect ^. height
 
-verticalInterval :: Rect -> (Int, Int)
-verticalInterval rect = (rect.top, bottom rect)
-
-horizontalInterval :: Rect -> (Int, Int)
-horizontalInterval rect = (rect.left, right rect)
+right :: (Num a) => (Rect a) -> a
+right rect = rect ^. left + rect ^. width

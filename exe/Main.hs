@@ -1,18 +1,9 @@
-import Control.Exception (finally, throw)
+import Control.Exception (finally)
 import Control.Monad
-import Control.Monad.Cont
-import Control.Monad.Except (MonadError (throwError), runExceptT)
-import Control.Monad.State.Strict (MonadIO (liftIO), MonadState (get), evalState, evalStateT, execStateT, lift, modify)
-import Data.Foldable
-import Data.Foldable1 hiding (foldr1)
-import Data.Function
-import Data.Functor
-import Data.String qualified as T
+import Control.Monad.Reader (ReaderT (runReaderT))
 import Data.Text qualified as T hiding (foldr, foldr1)
 import Data.Text.IO qualified as T
-import Data.Word
 import Reflex.Terminal.Image
-import Reflex.Terminal.Interval
 import Reflex.Terminal.Rect
 import System.Console.ANSI
 import System.IO
@@ -48,14 +39,33 @@ terminalLoop = do
   setCursorPosition 0 10
   Just (height, width) <- getTerminalSize
   hPrint stderr (height, width)
-  renderWithClipping Rect {top = 5, left = 0, height, width} $
-    Container
-      { axis = Column,
-        children =
-          [ Line [Span (T.show x)]
-          | x <- [0 .. 30]
+  runReaderT
+    ( renderWithClipping Rect {top = 0, left = 0, height, width} $
+        Container
+          Row
+          [ Container
+              Column
+              [ Span ("HIsdfdsfdsfdsf"),
+                Span ("Hell22o")
+              ],
+            Container
+              Column
+              [ Span ("HI"),
+                Span ("Hello")
+              ]
           ]
-      }
+    )
+    (0, 0)
+
+  -- renderWithClipping Rect {_top = 5, _left = 0, _height = height, _width = width} $
+  --   Container
+  --     { axis = Column,
+  --       children =
+  --         [
+  --           Line [Span (T.show x)],
+  --         | x <- [0 .. 0]
+  --         ]
+  --     }
   -- Span/
   -- setCursorPosition 0 11
   -- render $
@@ -63,6 +73,8 @@ terminalLoop = do
   --     "h"
   hFlush stdout
   void $ getChar
+  clearScreen
+  setCursorPosition 0 0
 
 -- clearScreen
 -- setCursorPosition 5 0

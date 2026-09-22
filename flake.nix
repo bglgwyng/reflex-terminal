@@ -39,7 +39,6 @@
                 ./reflex-terminal.cabal
                 ./exe
                 ./lib
-                ./test
                 ./CHANGELOG.md
                 ./LICENSE
               ];
