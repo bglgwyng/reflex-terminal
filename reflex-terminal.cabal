@@ -44,8 +44,12 @@ library
   build-depends:
     ansi-terminal,
     base ^>=4.20.2.0,
+    containers,
+    fingertree,
     lens,
     mtl,
+    patch,
+    reflex,
     template-haskell,
     text ^>=2.1.4,
     wcwidth,
@@ -58,6 +62,8 @@ executable demo
   build-depends:
     ansi-terminal,
     base ^>=4.20.2.0,
+    containers,
+    fingertree,
     mtl,
     reflex-terminal,
     text ^>=2.1.4,

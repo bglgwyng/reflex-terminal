@@ -1,6 +1,7 @@
 import Control.Exception (finally)
 import Control.Monad
 import Control.Monad.Reader (ReaderT (runReaderT))
+import Data.FingerTree
 import Data.Foldable (for_)
 import Data.List
 import Data.Text qualified as T hiding (foldr, foldr1)
@@ -41,37 +42,44 @@ terminalLoop = do
   hPrint stderr (height, width)
   lines <-
     runReaderT
-      ( renderWithClipping Rect {top = 0, left = 0, height, width} $
-          Container
-            Column
-            [ Container
-                Row
-                [ Container
-                    Column
-                    [ Span ("0123456789"),
-                      Span ("Hello")
-                    ],
-                  Container
-                    Column
-                    [ Span (T.pack ['A' .. 'Z']),
-                      Span ("Hello"),
-                      Span ("Bye")
-                    ]
-                ],
+      ( renderWithClipping Rect {top = 0, left = 0, height, width}
+          $ Container
+            @Column
+          $ fromList . fmap ContainerChild
+          $ [ Container
+                @Row
+                $ fromList . fmap ContainerChild
+                $ [ Container
+                      @Column
+                      $ fromList . fmap ContainerChild
+                      $ [ Span ("0123456789"),
+                          Span ("Hello")
+                        ],
+                    Container
+                      @Column
+                      $ fromList . fmap ContainerChild
+                      $ [ Span (T.pack ['A' .. 'Z']),
+                          Span ("Hello"),
+                          Span ("Bye")
+                        ]
+                  ],
               Container
-                Row
-                [ Container
-                    Column
-                    [ Span ("0123456789"),
-                      Span ("Hello")
-                    ],
-                  Container
-                    Column
-                    [ Span (T.pack ['A' .. 'Z']),
-                      Span ("Hello"),
-                      Span ("Bye")
-                    ]
-                ]
+                @Row
+                $ fromList . fmap ContainerChild
+                $ [ Container
+                      @Column
+                      $ fromList . fmap ContainerChild
+                      $ [ Span ("0123456789"),
+                          Span ("Hello")
+                        ],
+                    Container
+                      @Column
+                      $ fromList . fmap ContainerChild
+                      $ [ Span (T.pack ['A' .. 'Z']),
+                          Span ("Hello"),
+                          Span ("Bye")
+                        ]
+                  ]
             ]
       )
       (0, 0)
