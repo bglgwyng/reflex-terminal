@@ -75,7 +75,7 @@ terminalLoop = do
       )
       (0, 0)
 
-  forM_ lines (hPutStrLn stdout)
+  forM_ lines (T.hPutStrLn stdout)
 
   hFlush stdout
   void $ getChar
