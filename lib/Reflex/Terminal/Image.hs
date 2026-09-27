@@ -26,20 +26,20 @@ instance KnownAxis 'Row where
 instance KnownAxis 'Column where
   axisVal _ = Column
 
-data Image where
-  Span :: {text :: T.Text} -> Image
+data Image t where
+  Span :: {text :: T.Text} -> Image t
   Container ::
-    forall axis.
-    (KnownAxis axis, Measured (ContainerChildMetric axis) (ContainerChild axis)) =>
-    { children :: FingerTree (ContainerChildMetric axis) (ContainerChild axis)
+    forall t axis.
+    (KnownAxis axis, Measured (ContainerChildMetric axis) (ContainerChild t axis)) =>
+    { children :: FingerTree (ContainerChildMetric axis) (ContainerChild t axis)
     } ->
-    Image
-  Clip :: {rect :: Rect Int, image :: Image} -> Image
+    Image t
+  Clip :: {rect :: Rect Int, image :: Image t} -> Image t
 
-instance IsString Image where
+instance IsString (Image t) where
   fromString string = Span (T.pack string)
 
-newtype ContainerChild (axis :: Axis) = ContainerChild {unContainerChild :: Image}
+newtype ContainerChild t (axis :: Axis) = ContainerChild {unContainerChild :: Image t}
 
 data ContainerChildMetric (axis :: Axis) = ImageMetric
   { alongAxis :: Sum Int,
@@ -56,29 +56,29 @@ instance Semigroup (ContainerChildMetric axis) where
 instance Monoid (ContainerChildMetric axis) where
   mempty = ImageMetric {alongAxis = 0, acrossAxis = 0}
 
-instance Measured (ContainerChildMetric 'Row) (ContainerChild 'Row) where
+instance Measured (ContainerChildMetric 'Row) (ContainerChild t 'Row) where
   measure (ContainerChild image) = ImageMetric {alongAxis = Sum image.width, acrossAxis = Max image.height}
 
-instance Measured (ContainerChildMetric 'Column) (ContainerChild 'Column) where
+instance Measured (ContainerChildMetric 'Column) (ContainerChild t 'Column) where
   measure (ContainerChild image) = ImageMetric {alongAxis = Sum image.height, acrossAxis = Max image.width}
 
-instance HasField "height" Image Int where
+instance HasField "height" (Image t) Int where
   getField Span {} = 1
-  getField (Container @axis children) =
+  getField (Container @_ @axis children) =
     case axisVal $ Proxy @axis of
       Row -> (measure children).acrossAxis.getMax
       Column -> (measure children).alongAxis.getSum
   getField (Clip {rect}) = rect.height
 
-instance HasField "width" Image Int where
+instance HasField "width" (Image t) Int where
   getField span@Span {} = T.foldl' (\l c -> wcwidth c + l) 0 span.text
-  getField (Container @axis children) =
+  getField (Container @_ @axis children) =
     case axisVal $ Proxy @axis of
       Row -> (measure children).alongAxis.getSum
       Column -> (measure children).acrossAxis.getMax
   getField (Clip {rect}) = rect.width
 
-renderWithClipping :: (MonadRender m) => Rect Int -> Image -> m [T.Text]
+renderWithClipping :: (MonadRender m) => Rect Int -> Image t -> m [T.Text]
 renderWithClipping clip span@Span {}
   | 0 <- clip.top = do
       -- TODO: avoid unpack/pack
@@ -93,9 +93,9 @@ renderWithClipping clip span@Span {}
               <&> fst
       pure $ take clip.height $ [T.justifyLeft clip.width ' ' $ T.pack clipped] <> repeat (T.replicate clip.width " ")
   | otherwise = pure []
-renderWithClipping clip container@(Container @(axis' :: Axis) children) = do
+renderWithClipping clip container@(Container @_ @axis children) = do
   let interval' :: Lens' (Rect Int) (Interval Int)
-      interval' = case axisVal (Proxy @axis') of
+      interval' = case axisVal (Proxy @axis) of
         Row {} -> xInterval
         Column {} -> yInterval
 
@@ -122,7 +122,7 @@ renderWithClipping clip container@(Container @(axis' :: Axis) children) = do
             After -> throwError ()
           lift $ modify (+ sizeAlongAxis)
 
-    pure case axisVal (Proxy @axis') of
+    pure case axisVal (Proxy @axis) of
       Row -> (T.justifyLeft clip.width ' ') <$> foldr1 (zipWith (<>)) childrenLines
       Column -> take clip.height $ join childrenLines <> repeat (T.replicate clip.width " ")
 -- TODO: clipping
