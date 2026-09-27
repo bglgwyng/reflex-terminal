@@ -52,15 +52,13 @@ terminalLoop = do
                 $ [ Container
                       @Column
                       $ fromList . fmap ContainerChild
-                      $ [ Span ("0123456789"),
-                          Span ("Hello")
-                        ],
+                      $ ["0123456789", "Hello"],
                     Container
                       @Column
                       $ fromList . fmap ContainerChild
                       $ [ Span (T.pack ['A' .. 'Z']),
-                          Span ("Hello"),
-                          Span ("Bye")
+                          "Hello",
+                          "Bye"
                         ]
                   ],
               Container
@@ -69,15 +67,13 @@ terminalLoop = do
                 $ [ Container
                       @Column
                       $ fromList . fmap ContainerChild
-                      $ [ Span ("0123456789"),
-                          Span ("Hello")
-                        ],
+                      $ ["0123456789", "Hello"],
                     Container
                       @Column
                       $ fromList . fmap ContainerChild
                       $ [ Span (T.pack ['A' .. 'Z']),
-                          Span ("Hello"),
-                          Span ("Bye")
+                          "Hello",
+                          "Bye"
                         ]
                   ]
             ]
