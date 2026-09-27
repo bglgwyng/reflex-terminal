@@ -30,8 +30,8 @@ data Image where
   Span :: {text :: T.Text} -> Image
   Container ::
     forall axis.
-    (KnownAxis axis, Measured (ImageMetric axis) (ContainerChild axis)) =>
-    { children :: FingerTree (ImageMetric axis) (ContainerChild axis)
+    (KnownAxis axis, Measured (ContainerChildMetric axis) (ContainerChild axis)) =>
+    { children :: FingerTree (ContainerChildMetric axis) (ContainerChild axis)
     } ->
     Image
   Clip :: {rect :: Rect Int, image :: Image} -> Image
@@ -41,25 +41,25 @@ instance IsString Image where
 
 newtype ContainerChild (axis :: Axis) = ContainerChild {unContainerChild :: Image}
 
-data ImageMetric (axis :: Axis) = ImageMetric
+data ContainerChildMetric (axis :: Axis) = ImageMetric
   { alongAxis :: Sum Int,
     acrossAxis :: Max Int
   }
 
-instance Semigroup (ImageMetric axis) where
+instance Semigroup (ContainerChildMetric axis) where
   im1 <> im2 =
     ImageMetric
       { alongAxis = im1.alongAxis <> im2.alongAxis,
         acrossAxis = im1.acrossAxis <> im2.acrossAxis
       }
 
-instance Monoid (ImageMetric axis) where
+instance Monoid (ContainerChildMetric axis) where
   mempty = ImageMetric {alongAxis = 0, acrossAxis = 0}
 
-instance Measured (ImageMetric 'Row) (ContainerChild 'Row) where
+instance Measured (ContainerChildMetric 'Row) (ContainerChild 'Row) where
   measure (ContainerChild image) = ImageMetric {alongAxis = Sum image.width, acrossAxis = Max image.height}
 
-instance Measured (ImageMetric 'Column) (ContainerChild 'Column) where
+instance Measured (ContainerChildMetric 'Column) (ContainerChild 'Column) where
   measure (ContainerChild image) = ImageMetric {alongAxis = Sum image.height, acrossAxis = Max image.width}
 
 instance HasField "height" Image Int where
