@@ -1,6 +1,7 @@
 import Control.Exception (finally)
 import Control.Monad
 import Control.Monad.Reader (ReaderT (runReaderT))
+import Data.Foldable (for_)
 import Data.Text qualified as T hiding (foldr, foldr1)
 import Data.Text.IO qualified as T
 import Reflex.Terminal.Image
@@ -34,26 +35,47 @@ runTerminal = do
 terminalLoop :: IO ()
 terminalLoop = do
   clearScreen
-  setCursorPosition 0 10
+  setCursorPosition 0 0
   Just (height, width) <- getTerminalSize
   hPrint stderr (height, width)
-  runReaderT
-    ( renderWithClipping Rect {top = 0, left = 0, height, width = 13} $
-        Container
-          Row
-          [ Container
-              Column
-              [ Span ("0123456789"),
-                Span ("Hello")
-              ],
-            Container
-              Column
-              [ Span (T.pack ['A' .. 'Z']),
-                Span ("Hello")
-              ]
-          ]
-    )
-    (0, 0)
+  lines <-
+    runReaderT
+      ( renderWithClipping Rect {top = 0, left = 0, height = 10, width = 20} $
+          Container
+            Column
+            [ Container
+                Row
+                [ Container
+                    Column
+                    [ Span ("0123456789"),
+                      Span ("Hello")
+                    ],
+                  Container
+                    Column
+                    [ Span (T.pack ['A' .. 'Z']),
+                      Span ("Hello"),
+                      Span ("Bye")
+                    ]
+                ],
+              Container
+                Row
+                [ Container
+                    Column
+                    [ Span ("0123456789"),
+                      Span ("Hello")
+                    ],
+                  Container
+                    Column
+                    [ Span (T.pack ['A' .. 'Z']),
+                      Span ("Hello"),
+                      Span ("Bye")
+                    ]
+                ]
+            ]
+      )
+      (0, 0)
+
+  forM_ lines (hPutStrLn stdout)
 
   hFlush stdout
   void $ getChar

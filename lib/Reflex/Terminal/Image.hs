@@ -1,15 +1,14 @@
 module Reflex.Terminal.Image (Axis (..), Image (..), MonadRender, renderWithClipping) where
 
-import Control.Arrow
 import Control.Exception.Base
 import Control.Monad.Reader
+import Control.Monad.Writer.Strict
 import Data.Char.WCWidth
 import Data.Text qualified as T
 import Data.Text.IO ()
 import Reflex.Terminal.Interval
 import Reflex.Terminal.Prelude
 import Reflex.Terminal.Rect hiding (height, width)
-import System.Console.ANSI
 
 data Axis = Row | Column deriving (Show)
 
@@ -39,24 +38,20 @@ instance HasField "width" Image Int where
     | Column <- container.axis = foldr1 max ((.width) <$> container.children)
   getField (Clip {rect}) = rect.width
 
-renderWithClipping :: (MonadRender m) => Rect Int -> Image -> m ()
+renderWithClipping :: (MonadRender m) => Rect Int -> Image -> m [String]
 renderWithClipping clip span@Span {}
   | 0 <- clip.top = do
-      cursor <- ask
-      liftIO $ do
-        uncurry setCursorPosition cursor
-        setSGR $ Reset : []
-        clipped <-
-          (`evalStateT` 0) $
-            T.unpack span.text
-              & spanM
-                (\c -> gets (< clip.left) <* modify (+ wcwidth c))
-              <&> snd
-              >>= spanM
-                (\c -> gets (<= clip.right) <* modify (+ wcwidth c))
-                <&> fst
-        putStr $ clipped
-  | otherwise = pure ()
+      clipped <-
+        (`evalStateT` 0) $
+          T.unpack span.text
+            & spanM
+              (\c -> gets (< clip.left) <* modify (+ wcwidth c))
+            <&> snd
+            >>= spanM
+              (\c -> gets (<= clip.right) <* modify (+ wcwidth c))
+              <&> fst
+      pure $ take clip.height $ [take clip.width $ clipped <> repeat ' '] <> repeat (replicate clip.width ' ')
+  | otherwise = pure []
 renderWithClipping clip container@Container {axis} = do
   let sizeAlongAxis = case axis of
         Row -> (.width)
@@ -66,46 +61,31 @@ renderWithClipping clip container@Container {axis} = do
         Row -> xInterval
         Column -> yInterval
 
-  void $ (`execStateT` 0) do
-    runExceptT $ do
-      for_ container.children \child -> do
-        offset :: Int <- lift get
-        let childInterval = Interval (offset, offset + sizeAlongAxis child)
+  (`evalStateT` 0) do
+    childrenLines :: [[String]] <- execWriterT $
+      runExceptT $ do
+        for_ container.children \child -> do
+          offset :: Int <- lift get
+          let childInterval :: Interval Int
+              childInterval = Interval (offset, offset + sizeAlongAxis child)
 
-        let withOrigin :: (MonadReader (Int, Int) m) => m a -> m a
-            withOrigin m =
-              do
-                case axis of
-                  Row ->
-                    local (second (+ (offset - clip ^. interval' . _Wrapped . _1))) m
-                  Column ->
-                    local (first (+ (offset - clip ^. interval' . _Wrapped . _1))) m
+          case intersection childInterval (clip ^. interval') of
+            Before -> pure ()
+            OverlapsLeft overlap ->
+              tell . pure =<< renderWithClipping (clip & interval' .~ Interval (overlap ^. _Wrapped . _1 - offset, overlap.size)) child
+            Contains ->
+              assert (offset <= (clip ^. interval' . _Wrapped . _1)) $
+                tell . pure =<< renderWithClipping (clip & interval' .~ Interval (clip ^. interval' . _Wrapped . _1 - offset, clip ^. interval' . to (.size))) child
+            ContainedBy ->
+              tell . pure =<< renderWithClipping (clip & interval' .~ Interval (0, sizeAlongAxis child)) child
+            OverlapsRight overlap ->
+              tell . pure =<< renderWithClipping (clip & interval' .~ Interval (0, overlap.size)) child
+            After -> throwError ()
+          lift $ modify (+ sizeAlongAxis child)
 
-        case intersection childInterval (clip ^. interval') of
-          Before -> pure ()
-          OverlapsLeft overlap ->
-            withOrigin $
-              renderWithClipping
-                (clip & interval' .~ Interval (overlap ^. _Wrapped . _1 - offset, overlap.size))
-                child
-          Contains ->
-            assert (offset <= (clip ^. interval' . _Wrapped . _1)) $
-              withOrigin $
-                renderWithClipping
-                  (clip & interval' .~ Interval (clip ^. interval' . _Wrapped . _1 - offset, clip ^. interval' . to (.size)))
-                  child
-          ContainedBy ->
-            withOrigin $
-              renderWithClipping
-                (clip & interval' .~ Interval (0, sizeAlongAxis child))
-                child
-          OverlapsRight overlap ->
-            withOrigin $
-              renderWithClipping
-                (clip & interval' .~ Interval (0, overlap.size))
-                child
-          After -> throwError ()
-        lift $ modify (+ sizeAlongAxis child)
+    pure case axis of
+      Row -> take clip.width . (<> repeat ' ') <$> foldr1 (zipWith (<>)) childrenLines
+      Column -> take clip.height $ join childrenLines <> repeat (replicate clip.width ' ')
 -- TODO: clipping
 renderWithClipping clip (Clip {image}) = renderWithClipping clip image
 
