@@ -8,6 +8,7 @@ import Data.FingerTree
 import Data.Monoid
 import Data.Proxy
 import Data.Semigroup
+import Data.String (IsString (..))
 import Data.Text qualified as T
 import Data.Text.IO ()
 import Reflex.Terminal.Interval
@@ -34,6 +35,9 @@ data Image where
     } ->
     Image
   Clip :: {rect :: Rect Int, image :: Image} -> Image
+
+instance IsString Image where
+  fromString string = Span (T.pack string)
 
 newtype ContainerChild (axis :: Axis) = ContainerChild {unContainerChild :: Image}
 
