@@ -38,11 +38,12 @@ instance HasField "width" Image Int where
     | Column <- container.axis = foldr1 max ((.width) <$> container.children)
   getField (Clip {rect}) = rect.width
 
-renderWithClipping :: (MonadRender m) => Rect Int -> Image -> m [String]
+renderWithClipping :: (MonadRender m) => Rect Int -> Image -> m [T.Text]
 renderWithClipping clip span@Span {}
   | 0 <- clip.top = do
+      -- TODO: avoid unpack/pack
       clipped <-
-        (`evalStateT` 0) $
+        (`evalStateT` 0) $ do
           T.unpack span.text
             & spanM
               (\c -> gets (< clip.left) <* modify (+ wcwidth c))
@@ -50,7 +51,7 @@ renderWithClipping clip span@Span {}
             >>= spanM
               (\c -> gets (<= clip.right) <* modify (+ wcwidth c))
               <&> fst
-      pure $ take clip.height $ [take clip.width $ clipped <> repeat ' '] <> repeat (replicate clip.width ' ')
+      pure $ take clip.height $ [T.justifyLeft clip.width ' ' $ T.pack clipped] <> repeat (T.replicate clip.width " ")
   | otherwise = pure []
 renderWithClipping clip container@Container {axis} = do
   let sizeAlongAxis = case axis of
@@ -62,7 +63,7 @@ renderWithClipping clip container@Container {axis} = do
         Column -> yInterval
 
   (`evalStateT` 0) do
-    childrenLines :: [[String]] <- execWriterT $
+    childrenLines :: [[T.Text]] <- execWriterT $
       runExceptT $ do
         for_ container.children \child -> do
           offset :: Int <- lift get
@@ -84,8 +85,8 @@ renderWithClipping clip container@Container {axis} = do
           lift $ modify (+ sizeAlongAxis child)
 
     pure case axis of
-      Row -> take clip.width . (<> repeat ' ') <$> foldr1 (zipWith (<>)) childrenLines
-      Column -> take clip.height $ join childrenLines <> repeat (replicate clip.width ' ')
+      Row -> (T.justifyLeft clip.width ' ') <$> foldr1 (zipWith (<>)) childrenLines
+      Column -> take clip.height $ join childrenLines <> repeat (T.replicate clip.width " ")
 -- TODO: clipping
 renderWithClipping clip (Clip {image}) = renderWithClipping clip image
 
