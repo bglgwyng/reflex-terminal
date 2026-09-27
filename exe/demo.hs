@@ -44,16 +44,20 @@ terminalLoop = do
     runReaderT
       ( renderWithClipping Rect {top = 0, left = 0, height, width}
           $ Container
+            @()
             @Column
           $ fromList . fmap ContainerChild
           $ [ Container
+                @()
                 @Row
                 $ fromList . fmap ContainerChild
                 $ [ Container
+                      @()
                       @Column
                       $ fromList . fmap ContainerChild
                       $ ["0123456789", "Hello"],
                     Container
+                      @()
                       @Column
                       $ fromList . fmap ContainerChild
                       $ [ Span (T.pack ['A' .. 'Z']),
@@ -62,13 +66,16 @@ terminalLoop = do
                         ]
                   ],
               Container
+                @()
                 @Row
                 $ fromList . fmap ContainerChild
                 $ [ Container
+                      @()
                       @Column
                       $ fromList . fmap ContainerChild
                       $ ["0123456789", "Hello"],
                     Container
+                      @()
                       @Column
                       $ fromList . fmap ContainerChild
                       $ [ Span (T.pack ['A' .. 'Z']),
