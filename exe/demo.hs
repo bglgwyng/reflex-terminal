@@ -2,6 +2,7 @@ import Control.Exception (finally)
 import Control.Monad
 import Control.Monad.Reader (ReaderT (runReaderT))
 import Data.Foldable (for_)
+import Data.List
 import Data.Text qualified as T hiding (foldr, foldr1)
 import Data.Text.IO qualified as T
 import Reflex.Terminal.Image
@@ -40,7 +41,7 @@ terminalLoop = do
   hPrint stderr (height, width)
   lines <-
     runReaderT
-      ( renderWithClipping Rect {top = 0, left = 0, height = 10, width = 20} $
+      ( renderWithClipping Rect {top = 0, left = 0, height, width} $
           Container
             Column
             [ Container
@@ -75,7 +76,9 @@ terminalLoop = do
       )
       (0, 0)
 
-  forM_ lines (T.hPutStrLn stdout)
+  case unsnoc lines of
+    Nothing -> forM_ lines $ T.hPutStr stdout
+    Just (rest, last) -> forM_ (rest) (T.hPutStrLn stdout) *> T.hPutStr stdout last
 
   hFlush stdout
   void $ getChar
