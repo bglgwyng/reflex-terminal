@@ -50,9 +50,9 @@ library
     text ^>=2.1.4,
     wcwidth,
 
-executable reflex-terminal
+executable demo
   import: warnings, languages
-  main-is: Main.hs
+  main-is: demo.hs
   -- other-modules:
   -- other-extensions:
   build-depends:

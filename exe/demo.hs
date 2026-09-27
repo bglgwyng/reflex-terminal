@@ -31,8 +31,6 @@ runTerminal = do
     setSGR [Reset]
     showCursor
 
--- useMainScreenBuffer
-
 terminalLoop :: IO ()
 terminalLoop = do
   clearScreen
@@ -40,53 +38,27 @@ terminalLoop = do
   Just (height, width) <- getTerminalSize
   hPrint stderr (height, width)
   runReaderT
-    ( renderWithClipping Rect {top = 0, left = 0, height, width} $
+    ( renderWithClipping Rect {top = 0, left = 0, height, width = 13} $
         Container
           Row
           [ Container
               Column
-              [ Span ("HIsdfdsfdsfdsf"),
-                Span ("Hell22o")
+              [ Span ("0123456789"),
+                Span ("Hello")
               ],
             Container
               Column
-              [ Span ("HI"),
+              [ Span (T.pack ['A' .. 'Z']),
                 Span ("Hello")
               ]
           ]
     )
     (0, 0)
 
-  -- renderWithClipping Rect {_top = 5, _left = 0, _height = height, _width = width} $
-  --   Container
-  --     { axis = Column,
-  --       children =
-  --         [
-  --           Line [Span (T.show x)],
-  --         | x <- [0 .. 0]
-  --         ]
-  --     }
-  -- Span/
-  -- setCursorPosition 0 11
-  -- render $
-  --   Span
-  --     "h"
   hFlush stdout
   void $ getChar
   clearScreen
   setCursorPosition 0 0
-
--- clearScreen
--- setCursorPosition 5 0
--- setTitle "ANSI Terminal Short Example"
--- setSGR
---   [ SetConsoleIntensity BoldIntensity,
---     SetColor Foreground Vivid Red
---   ]
--- putStrLn "Type characters (q to quit):"
--- setSGR [SetColor Foreground Vivid White]
--- hFlush stdout
--- readCharacters 0
 
 readCharacters :: Int -> IO ()
 readCharacters characterCount = do

@@ -6,6 +6,7 @@ module Reflex.Terminal.Prelude
     module GHC.Records,
     module Data.Foldable,
     makeLenses',
+    spanM,
   )
 where
 
@@ -20,3 +21,14 @@ import Language.Haskell.TH
 
 makeLenses' :: Name -> DecsQ
 makeLenses' = makeFieldOptics (lensRules {_fieldToDef = \_ _ n -> [TopName (mkName (nameBase n))]})
+
+spanM :: forall m a. (Monad m) => (a -> m Bool) -> [a] -> m ([a], [a])
+spanM predicate = go []
+  where
+    go :: [a] -> [a] -> m ([a], [a])
+    go acc [] = pure (reverse acc, [])
+    go acc rest@(x : xs) = do
+      matches <- predicate x
+      if matches
+        then go (x : acc) xs
+        else pure (reverse acc, rest)

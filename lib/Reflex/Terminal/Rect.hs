@@ -2,8 +2,6 @@
 
 module Reflex.Terminal.Rect where
 
-import Control.Lens.Internal.FieldTH (LensRules (_fieldToDef), makeFieldOptics)
-import Language.Haskell.TH
 import Reflex.Terminal.Interval
 import Reflex.Terminal.Prelude
 
@@ -13,6 +11,8 @@ data Rect a = Rect
     height :: a,
     width :: a
   }
+
+deriving instance (Show a) => Show (Rect a)
 
 makeLenses' 'Rect
 
@@ -40,8 +40,8 @@ translateX dx rect =
     . _2
     %~ (+ dx)
 
-bottom :: (Num a) => Rect a -> a
-bottom rect = rect ^. top + rect ^. height
+instance (Num a) => HasField "bottom" (Rect a) a where
+  getField rect = rect ^. top + rect ^. height
 
-right :: (Num a) => (Rect a) -> a
-right rect = rect ^. left + rect ^. width
+instance (Num a) => HasField "right" (Rect a) a where
+  getField rect = rect ^. left + rect ^. width
