@@ -42,44 +42,44 @@ instance IsString (Image t) where
 newtype ContainerChild t (axis :: Axis) = ContainerChild {unContainerChild :: Image t}
 
 data ContainerChildMetric (axis :: Axis) = ImageMetric
-  { alongAxis :: Sum Int,
-    acrossAxis :: Max Int
+  { alongAxis :: Sum Int
+  , acrossAxis :: Max Int
   }
 
 instance Semigroup (ContainerChildMetric axis) where
   im1 <> im2 =
     ImageMetric
-      { alongAxis = im1.alongAxis <> im2.alongAxis,
-        acrossAxis = im1.acrossAxis <> im2.acrossAxis
+      { alongAxis = im1.alongAxis <> im2.alongAxis
+      , acrossAxis = im1.acrossAxis <> im2.acrossAxis
       }
 
 instance Monoid (ContainerChildMetric axis) where
-  mempty = ImageMetric {alongAxis = 0, acrossAxis = 0}
+  mempty = ImageMetric{alongAxis = 0, acrossAxis = 0}
 
 instance Measured (ContainerChildMetric 'Row) (ContainerChild t 'Row) where
-  measure (ContainerChild image) = ImageMetric {alongAxis = Sum image.width, acrossAxis = Max image.height}
+  measure (ContainerChild image) = ImageMetric{alongAxis = Sum image.width, acrossAxis = Max image.height}
 
 instance Measured (ContainerChildMetric 'Column) (ContainerChild t 'Column) where
-  measure (ContainerChild image) = ImageMetric {alongAxis = Sum image.height, acrossAxis = Max image.width}
+  measure (ContainerChild image) = ImageMetric{alongAxis = Sum image.height, acrossAxis = Max image.width}
 
 instance HasField "height" (Image t) Int where
-  getField Span {} = 1
+  getField Span{} = 1
   getField (Container @_ @axis children) =
     case axisVal $ Proxy @axis of
       Row -> (measure children).acrossAxis.getMax
       Column -> (measure children).alongAxis.getSum
-  getField (Clip {rect}) = rect.height
+  getField (Clip{rect}) = rect.height
 
 instance HasField "width" (Image t) Int where
-  getField span@Span {} = T.foldl' (\l c -> wcwidth c + l) 0 span.text
+  getField span@Span{} = T.foldl' (\l c -> wcwidth c + l) 0 span.text
   getField (Container @_ @axis children) =
     case axisVal $ Proxy @axis of
       Row -> (measure children).alongAxis.getSum
       Column -> (measure children).acrossAxis.getMax
-  getField (Clip {rect}) = rect.width
+  getField (Clip{rect}) = rect.width
 
 renderWithClipping :: (MonadRender m) => Rect Int -> Image t -> m [T.Text]
-renderWithClipping clip span@Span {}
+renderWithClipping clip span@Span{}
   | 0 <- clip.top = do
       -- TODO: avoid unpack/pack
       clipped <-
@@ -96,8 +96,8 @@ renderWithClipping clip span@Span {}
 renderWithClipping clip container@(Container @_ @axis children) = do
   let interval' :: Lens' (Rect Int) (Interval Int)
       interval' = case axisVal (Proxy @axis) of
-        Row {} -> xInterval
-        Column {} -> yInterval
+        Row{} -> xInterval
+        Column{} -> yInterval
 
   (`evalStateT` 0) do
     childrenLines :: [[T.Text]] <- execWriterT $
@@ -126,6 +126,6 @@ renderWithClipping clip container@(Container @_ @axis children) = do
       Row -> (T.justifyLeft clip.width ' ') <$> foldr1 (zipWith (<>)) childrenLines
       Column -> take clip.height $ join childrenLines <> repeat (T.replicate clip.width " ")
 -- TODO: clipping
-renderWithClipping clip (Clip {image}) = renderWithClipping clip image
+renderWithClipping clip (Clip{image}) = renderWithClipping clip image
 
 type MonadRender m = (MonadReader (Int, Int) m, MonadIO m)

@@ -46,7 +46,7 @@
             devShell = {
               hlsCheck.enable = false;
               tools = hpkgs: {
-                inherit (hpkgs) cabal-gild doctest;
+                inherit (hpkgs) cabal-gild doctest fourmolu;
               };
             };
           };
