@@ -42,7 +42,7 @@ terminalLoop = do
   hPrint stderr (height, width)
   lines <-
     runReaderT
-      ( renderWithClipping Rect {top = 0, left = 0, height, width}
+      ( renderWithClipping Rect{top = 0, left = 0, height, width}
           $ Container
             @()
             @Column
@@ -55,17 +55,17 @@ terminalLoop = do
                       @()
                       @Column
                       $ fromList . fmap ContainerChild
-                      $ ["0123456789", "Hello"],
-                    Container
+                      $ ["0123456789", "Hello"]
+                  , Container
                       @()
                       @Column
                       $ fromList . fmap ContainerChild
-                      $ [ Span (T.pack ['A' .. 'Z']),
-                          "Hello",
-                          "Bye"
+                      $ [ Span (T.pack ['A' .. 'Z'])
+                        , "Hello"
+                        , "Bye"
                         ]
-                  ],
-              Container
+                  ]
+            , Container
                 @()
                 @Row
                 $ fromList . fmap ContainerChild
@@ -73,14 +73,14 @@ terminalLoop = do
                       @()
                       @Column
                       $ fromList . fmap ContainerChild
-                      $ ["0123456789", "Hello"],
-                    Container
+                      $ ["0123456789", "Hello"]
+                  , Container
                       @()
                       @Column
                       $ fromList . fmap ContainerChild
-                      $ [ Span (T.pack ['A' .. 'Z']),
-                          "Hello",
-                          "Bye"
+                      $ [ Span (T.pack ['A' .. 'Z'])
+                        , "Hello"
+                        , "Bye"
                         ]
                   ]
             ]

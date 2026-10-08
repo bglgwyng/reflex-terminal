@@ -6,10 +6,10 @@ import Reflex.Terminal.Interval
 import Reflex.Terminal.Prelude
 
 data Rect a = Rect
-  { top :: a,
-    left :: a,
-    height :: a,
-    width :: a
+  { top :: a
+  , left :: a
+  , height :: a
+  , width :: a
   }
 
 deriving instance (Show a) => Show (Rect a)
