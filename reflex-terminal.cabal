@@ -30,6 +30,7 @@ library
   import: warnings, languages
   hs-source-dirs: lib
   exposed-modules:
+    Reflex.Terminal.Host
     Reflex.Terminal.Image
     Reflex.Terminal.Interval
     Reflex.Terminal.Rect
@@ -52,11 +53,16 @@ library
     reflex,
     template-haskell,
     text ^>=2.1.4,
+    unix,
     wcwidth,
 
 executable demo
   import: warnings, languages
   main-is: demo.hs
+  ghc-options:
+    -threaded
+    -rtsopts
+
   -- other-modules:
   -- other-extensions:
   build-depends:
@@ -65,6 +71,7 @@ executable demo
     containers,
     fingertree,
     mtl,
+    reflex,
     reflex-terminal,
     text ^>=2.1.4,
 
