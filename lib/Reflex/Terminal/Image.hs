@@ -128,4 +128,4 @@ renderWithClipping clip container@(Container @_ @axis children) = do
 -- TODO: clipping
 renderWithClipping clip (Clip{image}) = renderWithClipping clip image
 
-type MonadRender m = (MonadReader (Int, Int) m, MonadIO m)
+type MonadRender m = (MonadIO m)
