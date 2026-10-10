@@ -22,22 +22,7 @@ main = do
 
         let dSpan = Span <$> dText
             dSpan2 = Span <$> dText2
-            dContainer =
-              Container
-                @_
-                @Row
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ [ Container
-                      @_
-                      @Column
-                      $ FT.fromList
-                      $ [ContainerChild <$> dSpan, ContainerChild <$> dSpan2]
-                  , Container
-                      @_
-                      @Column
-                      $ FT.fromList
-                      $ [ContainerChild <$> dSpan, ContainerChild <$> dSpan2]
-                  ]
+            dContainer = horizontal [pure $ vertical (replicate 8 dSpan)]
 
         pure (pure dContainer, void $ ffilter (== 'q') eStdin)
       useNormalScreenBuffer
@@ -45,46 +30,46 @@ main = do
       T.hPutStrLn stderr "Standard output does not support 'ANSI' escape codes."
       exitFailure
 
-sampleImage :: forall t. (Reflex t) => Image t
-sampleImage =
-  Container
-    @t
-    @Column
-    $ FT.fromList . fmap (pure . ContainerChild)
-    $ [ Container
-          @t
-          @Row
-          $ FT.fromList . fmap (pure . ContainerChild)
-          $ [ Container
-                @t
-                @Column
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ ["0123456789", "Hello"]
-            , Container
-                @t
-                @Column
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ [ Span (T.pack ['A' .. 'Z'])
-                  , "Hello"
-                  , "Bye"
-                  ]
-            ]
-      , Container
-          @t
-          @Row
-          $ FT.fromList . fmap (pure . ContainerChild)
-          $ [ Container
-                @t
-                @Column
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ ["0123456789", "Hello"]
-            , Container
-                @t
-                @Column
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ [ Span (T.pack ['A' .. 'Z'])
-                  , "Hello"
-                  , "Bye"
-                  ]
-            ]
-      ]
+-- sampleImage :: forall t. (Reflex t) => Image t
+-- sampleImage =
+--   Container
+--     @t
+--     @Column
+--     $ FT.fromList . fmap (pure . ContainerChild)
+--     $ [ Container
+--           @t
+--           @Row
+--           $ FT.fromList . fmap (pure . ContainerChild)
+--           $ [ Container
+--                 @t
+--                 @Column
+--                 $ FT.fromList . fmap (pure . ContainerChild)
+--                 $ ["0123456789", "Hello"]
+--             , Container
+--                 @t
+--                 @Column
+--                 $ FT.fromList . fmap (pure . ContainerChild)
+--                 $ [ Span (T.pack ['A' .. 'Z'])
+--                   , "Hello"
+--                   , "Bye"
+--                   ]
+--             ]
+--       , Container
+--           @t
+--           @Row
+--           $ FT.fromList . fmap (pure . ContainerChild)
+--           $ [ Container
+--                 @t
+--                 @Column
+--                 $ FT.fromList . fmap (pure . ContainerChild)
+--                 $ ["0123456789", "Hello"]
+--             , Container
+--                 @t
+--                 @Column
+--                 $ FT.fromList . fmap (pure . ContainerChild)
+--                 $ [ Span (T.pack ['A' .. 'Z'])
+--                   , "Hello"
+--                   , "Bye"
+--                   ]
+--             ]
+--       ]
