@@ -1,4 +1,6 @@
-module Reflex.Terminal.Image (Axis (..), Image (..), ContainerChild (..), MonadRender, renderWithClipping) where
+{-# LANGUAGE UndecidableInstances #-}
+
+module Reflex.Terminal.Image (Axis (..), Image (..), ContainerChild (..), renderWithClipping) where
 
 import Control.Exception.Base
 import Control.Monad.Reader
@@ -11,6 +13,7 @@ import Data.Semigroup
 import Data.String (IsString (..))
 import Data.Text qualified as T
 import Data.Text.IO ()
+import Reflex
 import Reflex.Terminal.Interval
 import Reflex.Terminal.Prelude
 import Reflex.Terminal.Rect hiding (height, width)
@@ -30,8 +33,8 @@ data Image t where
   Span :: {text :: T.Text} -> Image t
   Container ::
     forall t axis.
-    (KnownAxis axis, Measured (ContainerChildMetric axis) (ContainerChild t axis)) =>
-    { children :: FingerTree (ContainerChildMetric axis) (ContainerChild t axis)
+    (KnownAxis axis, Measured (Dynamic t (ContainerChildMetric axis)) (Dynamic t (ContainerChild t axis))) =>
+    { children :: FingerTree (Dynamic t (ContainerChildMetric axis)) (Dynamic t (ContainerChild t axis))
     } ->
     Image t
   Clip :: {rect :: Rect Int, image :: Image t} -> Image t
@@ -56,29 +59,46 @@ instance Semigroup (ContainerChildMetric axis) where
 instance Monoid (ContainerChildMetric axis) where
   mempty = ImageMetric{alongAxis = 0, acrossAxis = 0}
 
-instance Measured (ContainerChildMetric 'Row) (ContainerChild t 'Row) where
-  measure (ContainerChild image) = ImageMetric{alongAxis = Sum image.width, acrossAxis = Max image.height}
+instance (Reflex t) => Measured (Dynamic t (ContainerChildMetric 'Row)) (Dynamic t (ContainerChild t 'Row)) where
+  measure dc = do
+    ContainerChild image <- dc
+    width <- image.width
+    height <- image.height
+    pure ImageMetric{alongAxis = Sum width, acrossAxis = Max height}
 
-instance Measured (ContainerChildMetric 'Column) (ContainerChild t 'Column) where
-  measure (ContainerChild image) = ImageMetric{alongAxis = Sum image.height, acrossAxis = Max image.width}
+instance (Reflex t) => Measured (Dynamic t (ContainerChildMetric 'Column)) (Dynamic t (ContainerChild t 'Column)) where
+  measure dc = do
+    ContainerChild image <- dc
+    width <- image.width
+    height <- image.height
+    pure ImageMetric{alongAxis = Sum height, acrossAxis = Max width}
 
-instance HasField "height" (Image t) Int where
+instance (Reflex t) => HasField "height" (Image t) (Dynamic t Int) where
   getField Span{} = 1
   getField (Container @_ @axis children) =
     case axisVal $ Proxy @axis of
-      Row -> (measure children).acrossAxis.getMax
-      Column -> (measure children).alongAxis.getSum
-  getField (Clip{rect}) = rect.height
+      Row -> do
+        x <- measure children
+        pure x.acrossAxis.getMax
+      Column -> do
+        x <- measure children
+        pure x.alongAxis.getSum
+  getField (Clip{rect}) = pure rect.height
 
-instance HasField "width" (Image t) Int where
-  getField span@Span{} = T.foldl' (\l c -> wcwidth c + l) 0 span.text
+instance (Reflex t) => HasField "width" (Image t) (Dynamic t Int) where
+  getField span@Span{} = do
+    pure $ T.foldl' (\l c -> wcwidth c + l) 0 span.text
   getField (Container @_ @axis children) =
     case axisVal $ Proxy @axis of
-      Row -> (measure children).alongAxis.getSum
-      Column -> (measure children).acrossAxis.getMax
-  getField (Clip{rect}) = rect.width
+      Row -> do
+        x <- measure children
+        pure x.alongAxis.getSum
+      Column -> do
+        x <- measure children
+        pure x.acrossAxis.getMax
+  getField (Clip{rect}) = pure rect.width
 
-renderWithClipping :: (MonadRender m) => Rect Int -> Image t -> m [T.Text]
+renderWithClipping :: (Reflex t) => Rect Int -> Image t -> Dynamic t [T.Text]
 renderWithClipping clip span@Span{}
   | 0 <- clip.top = do
       -- TODO: avoid unpack/pack
@@ -102,23 +122,29 @@ renderWithClipping clip container@(Container @_ @axis children) = do
   (`evalStateT` 0) do
     childrenLines :: [[T.Text]] <- execWriterT $
       runExceptT $ do
-        for_ children \c@(ContainerChild child) -> do
+        for_ children \dc -> do
+          containerChild <- lift . lift . lift $ dc
+          let ContainerChild child = containerChild
           offset :: Int <- lift get
-          let sizeAlongAxis = (measure c).alongAxis.getSum
+          metric <- lift . lift . lift $ (measure dc)
+          let sizeAlongAxis = metric.alongAxis.getSum
               childInterval :: Interval Int
               childInterval = Interval (offset, offset + sizeAlongAxis)
 
           case intersection childInterval (clip ^. interval') of
             Before -> pure ()
-            OverlapsLeft overlap ->
-              tell . pure =<< renderWithClipping (clip & interval' .~ Interval (overlap ^. _Wrapped . _1 - offset, overlap.size)) child
+            OverlapsLeft overlap -> do
+              tell . pure =<< (lift . lift . lift $ renderWithClipping (clip & interval' .~ Interval (overlap ^. _Wrapped . _1 - offset, overlap.size)) child)
             Contains ->
               assert (offset <= (clip ^. interval' . _Wrapped . _1)) $
-                tell . pure =<< renderWithClipping (clip & interval' .~ Interval (clip ^. interval' . _Wrapped . _1 - offset, clip ^. interval' . to (.size))) child
+                tell . pure
+                  =<< ( lift . lift . lift $
+                          renderWithClipping (clip & interval' .~ Interval (clip ^. interval' . _Wrapped . _1 - offset, clip ^. interval' . to (.size))) child
+                      )
             ContainedBy ->
-              tell . pure =<< renderWithClipping (clip & interval' .~ Interval (0, sizeAlongAxis)) child
+              tell . pure =<< (lift . lift . lift $ renderWithClipping (clip & interval' .~ Interval (0, sizeAlongAxis)) child)
             OverlapsRight overlap ->
-              tell . pure =<< renderWithClipping (clip & interval' .~ Interval (0, overlap.size)) child
+              tell . pure =<< (lift . lift . lift $ renderWithClipping (clip & interval' .~ Interval (0, overlap.size)) child)
             After -> throwError ()
           lift $ modify (+ sizeAlongAxis)
 
@@ -128,4 +154,5 @@ renderWithClipping clip container@(Container @_ @axis children) = do
 -- TODO: clipping
 renderWithClipping clip (Clip{image}) = renderWithClipping clip image
 
-type MonadRender m = (MonadIO m)
+instance (MonadSample t m, Monoid w) => MonadSample t (WriterT w m) where
+  sample = lift . sample

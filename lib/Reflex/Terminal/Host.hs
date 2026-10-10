@@ -2,6 +2,7 @@ module Reflex.Terminal.Host (runTerminal) where
 
 import Control.Concurrent
 import Control.Exception
+import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Reflex
 import Reflex.Host.Headless
@@ -47,9 +48,8 @@ runTerminal guest = do
     setCursorPosition 0 0
 
     runHeadlessApp do
-      let render image = do
-            lines <- renderWithClipping R.Rect{top = 0, left = 0, height, width} image
-
+      let renderLines :: [T.Text] -> IO ()
+          renderLines lines = do
             case unsnoc lines of
               Nothing -> forM_ lines $ T.hPutStr stdout
               Just (rest, last) -> forM_ (rest) (T.hPutStrLn stdout) *> T.hPutStr stdout last
@@ -64,10 +64,10 @@ runTerminal guest = do
         ePostBuild <&> \_ ->
           void . liftIO . forkIO $ forever do getChar >>= triggerInput
 
-      performEvent_ $
-        current dImage `tag` ePostBuild <&> liftIO . render
-      performEvent_ $
-        updated dImage <&> liftIO . render
+      let dLines = dImage >>= renderWithClipping R.Rect{top = 0, left = 0, height, width}
+
+      performEvent_ $ current dLines `tag` ePostBuild <&> liftIO . renderLines
+      performEvent_ $ updated dLines <&> liftIO . renderLines
 
       pure eShutdown
 
