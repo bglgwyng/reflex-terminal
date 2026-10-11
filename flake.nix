@@ -5,6 +5,10 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     haskell-flake.url = "github:srid/haskell-flake";
+    reflex = {
+      url = "github:reflex-frp/reflex";
+      flake = false;
+    };
   };
 
   outputs =
@@ -42,6 +46,9 @@
                 ./CHANGELOG.md
                 ./LICENSE
               ];
+            };
+            packages = {
+              reflex.source = inputs.reflex;
             };
             devShell = {
               hlsCheck.enable = false;
