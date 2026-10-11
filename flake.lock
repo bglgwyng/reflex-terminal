@@ -64,11 +64,28 @@
         "type": "github"
       }
     },
+    "reflex": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791657705,
+        "narHash": "sha256-Y7EyMjKs2DOjgjQ76Ij/PJexkHYdUlKrB8Na7lbtKYA=",
+        "owner": "reflex-frp",
+        "repo": "reflex",
+        "rev": "cdea6e315b40a5156d87a328fd357c2b1f4076ab",
+        "type": "github"
+      },
+      "original": {
+        "owner": "reflex-frp",
+        "repo": "reflex",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "flake-parts": "flake-parts",
         "haskell-flake": "haskell-flake",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "reflex": "reflex"
       }
     }
   },
