@@ -21,23 +21,7 @@ main = do
         dText2 <- accumDyn (\acc c -> (acc <> T.pack [c, c])) ("." :: T.Text) (eStdin)
 
         let dSpan = Span <$> dText
-            dSpan2 = Span <$> dText2
-            dContainer =
-              Container
-                @_
-                @Row
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ [ Container
-                      @_
-                      @Column
-                      $ FT.fromList
-                      $ [ContainerChild <$> dSpan, ContainerChild <$> dSpan2]
-                  , Container
-                      @_
-                      @Column
-                      $ FT.fromList
-                      $ [ContainerChild <$> dSpan, ContainerChild <$> dSpan2]
-                  ]
+            dContainer = horizontal $ replicate 3 $ pure $ vertical $ replicate 3 $ pure $ horizontal (replicate 5 $ pure $ vertical (replicate 5 dSpan))
 
         pure (pure dContainer, void $ ffilter (== 'q') eStdin)
       useNormalScreenBuffer

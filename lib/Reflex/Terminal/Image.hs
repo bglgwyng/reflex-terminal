@@ -1,12 +1,21 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Reflex.Terminal.Image (Axis (..), Image (..), ContainerChild (..), renderWithClipping) where
+module Reflex.Terminal.Image (
+  Axis (..),
+  Image (..),
+  ContainerChild (..),
+  renderWithoutClipping,
+  renderWithClipping,
+  horizontal,
+  vertical,
+) where
 
 import Control.Exception.Base
 import Control.Monad.Reader
 import Control.Monad.Writer.Strict
 import Data.Char.WCWidth
 import Data.FingerTree
+import Data.FingerTree qualified as FT
 import Data.Monoid
 import Data.Proxy
 import Data.Semigroup
@@ -98,6 +107,18 @@ instance (Reflex t) => HasField "width" (Image t) (Dynamic t Int) where
         pure x.acrossAxis.getMax
   getField (Clip{rect}) = pure rect.width
 
+renderWithoutClipping :: (Reflex t) => Image t -> Dynamic t [T.Text]
+renderWithoutClipping span@Span{} = pure [span.text]
+renderWithoutClipping container@(Container @_ @axis children) = case axisVal (Proxy @axis) of
+  Row ->
+    foldr1
+      (zipDynWith (zipWith (<>)))
+      ((>>= renderWithoutClipping) . fmap (.unContainerChild) <$> toList children)
+  Column ->
+    join
+      <$> distributeListOverDyn
+        ((>>= renderWithoutClipping) . fmap (.unContainerChild) <$> toList children)
+
 renderWithClipping :: (Reflex t) => Rect Int -> Image t -> Dynamic t [T.Text]
 renderWithClipping clip span@Span{}
   | 0 <- clip.top = do
@@ -156,3 +177,9 @@ renderWithClipping clip (Clip{image}) = renderWithClipping clip image
 
 instance (MonadSample t m, Monoid w) => MonadSample t (WriterT w m) where
   sample = lift . sample
+
+horizontal :: forall t. (Reflex t) => [Dynamic t (Image t)] -> Image t
+horizontal children = Container @t @Row (FT.fromList (fmap ContainerChild <$> children))
+
+vertical :: forall t. (Reflex t) => [Dynamic t (Image t)] -> Image t
+vertical children = Container @t @Column (FT.fromList (fmap ContainerChild <$> children))

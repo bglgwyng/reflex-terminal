@@ -8,7 +8,6 @@ import Reflex
 import Reflex.Host.Headless
 import Reflex.Terminal.Image
 import Reflex.Terminal.Prelude
-import Reflex.Terminal.Rect qualified as R
 import System.Console.ANSI
 import System.IO
 import System.Posix
@@ -64,10 +63,17 @@ runTerminal guest = do
         ePostBuild <&> \_ ->
           void . liftIO . forkIO $ forever do getChar >>= triggerInput
 
-      let dLines = dImage >>= renderWithClipping R.Rect{top = 0, left = 0, height, width}
+      let dLines = dImage >>= renderWithoutClipping
 
       performEvent_ $ current dLines `tag` ePostBuild <&> liftIO . renderLines
       performEvent_ $ updated dLines <&> liftIO . renderLines
+      -- networkView $
+      --   ddLines <&> \dLines -> do
+      --     for_ (zip [0 ..] dLines) \(i, dLine) -> do
+      --       networkView $
+      --         dLine <&> \line -> liftIO do
+      --           setCursorPosition i 0
+      --           T.hPutStr stdout line
 
       pure eShutdown
 
