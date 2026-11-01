@@ -6,6 +6,7 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Reflex
 import Reflex.Host.Headless
+import Reflex.Network
 import Reflex.Terminal.Image
 import Reflex.Terminal.Prelude
 import System.Console.ANSI
@@ -63,17 +64,17 @@ runTerminal guest = do
         ePostBuild <&> \_ ->
           void . liftIO . forkIO $ forever do getChar >>= triggerInput
 
-      let dLines = dImage >>= renderWithoutClipping
+      let ddLines = dImage >>= renderWithoutClipping
 
-      performEvent_ $ current dLines `tag` ePostBuild <&> liftIO . renderLines
-      performEvent_ $ updated dLines <&> liftIO . renderLines
-      -- networkView $
-      --   ddLines <&> \dLines -> do
-      --     for_ (zip [0 ..] dLines) \(i, dLine) -> do
-      --       networkView $
-      --         dLine <&> \line -> liftIO do
-      --           setCursorPosition i 0
-      --           T.hPutStr stdout line
+      void . networkView $ do
+        ddLines <&> \dLines -> do
+          for_ (zip [0 ..] dLines) \(i, dLine) -> do
+            e <-
+              networkView $
+                ddLines <&> \line -> liftIO do
+                  setCursorPosition i 0
+                  T.hPutStr stdout dLine
+            performEvent_ $ e <&> const (liftIO $ hFlush stdout)
 
       pure eShutdown
 
