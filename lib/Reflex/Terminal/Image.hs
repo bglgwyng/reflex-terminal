@@ -19,9 +19,8 @@ import Reflex.Terminal.Prelude
 
 type Image t = Dynamic t [Dynamic t T.Text]
 type Renderer t =
-  forall m.
-  (MonadReader (Dynamic t Int, Dynamic t Int) m) =>
-  m (Image t)
+  (Reflex t) =>
+  (Dynamic t Int, Dynamic t Int) -> (Image t)
 
 fill :: (Reflex t) => Char -> Renderer t
 fill ch = do
@@ -59,17 +58,18 @@ horizontal children = do
   concatHorizontal = zipDynWith (zipWith (<>))
 
 -- TODO: add clipping
-vertical :: (Reflex t) => M.Map k (Int, Renderer t) -> Renderer t
-vertical children = do
+vertical :: (Reflex t) => Dynamic t (M.Map k (Int, Renderer t)) -> Renderer t
+vertical dChildren = do
   (dHeight, dWidth) <- ask
-  let bodyHeight = sum $ fst <$> M.elems children
-      dPadHeight = dHeight - pure bodyHeight
+  let bodyHeight = sum . fmap fst . M.elems <$> dChildren
+      dPadHeight = dHeight - bodyHeight
       dPadding = (`replicate` ((`T.replicate` " ") <$> dWidth)) <$> dPadHeight
-  pure $
+  pure $ do
+    children <- dChildren
     ( join
         <$> distributeListOverDyn
           ( (M.elems children) <&> \(height, child) -> do
               child (pure height, dWidth)
           )
-    )
+      )
       <> dPadding

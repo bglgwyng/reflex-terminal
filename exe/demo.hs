@@ -10,6 +10,9 @@ import Reflex.Terminal.Host
 import Reflex.Terminal.Image
 import System.Console.ANSI
 
+import Control.Arrow ((>>>))
+import Data.Functor
+import Data.Functor.Misc (Const2 (Const2))
 import System.Exit (exitFailure)
 import System.IO
 
@@ -24,24 +27,31 @@ main = do
         eInput <- asks (.eInput)
         size@(dHeight, dWidth) <- asks (.size)
 
-        dText <- accumDyn (\acc c -> (acc <> T.pack [c])) ("." :: T.Text) (eInput)
+        dChildHeight :: Dynamic t Int <- count eInput
 
         let dContainer =
               box
                 '.'
-                ( vertical $
-                    M.fromList
-                      [
-                        ( 0
-                        , (5, horizontal (M.fromList [(0, (5, fill 'a')), (1, (10, fill 'b')), (2, (10, fill 'c'))]))
-                        )
-                      ,
-                        ( 1
-                        , (5, horizontal (M.fromList [(0, (5, fill 'd')), (1, (10, fill 'e')), (2, (10, fill 'f'))]))
-                        )
-                      ]
-                )
+                (\size -> vertical (children size) size)
                 size
+            children :: (Reflex t) => (Dynamic t Int, Dynamic t Int) -> Dynamic t (M.Map Int ((Int, Renderer t)))
+            children (dHeight, _) =
+              distributeMapOverDynPure $
+                M.fromList
+                  [
+                    ( 0
+                    , do
+                        childHeight <- dChildHeight
+                        pure (childHeight, horizontal (M.fromList [(0, (5, fill 'a')), (1, (10, fill 'b')), (2, (10, fill 'c'))]))
+                    )
+                  ,
+                    ( 1
+                    , do
+                        height <- dHeight
+                        childHeight <- dChildHeight
+                        pure (height - childHeight, horizontal (M.fromList [(0, (5, fill 'd')), (1, (10, fill 'e')), (2, (10, fill 'f'))]))
+                    )
+                  ]
         pure (dContainer, void $ ffilter (== 'q') eInput)
       useNormalScreenBuffer
     else do
