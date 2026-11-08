@@ -76,6 +76,7 @@ runTerminal guest = do
         ePostBuild <&> \_ ->
           void . liftIO . forkIO $ forever do getChar >>= triggerInput
 
+      -- TODO: handle SIGTSTP
       void . networkView $ do
         ddLines <&> \dLines -> do
           for_ (zip [0 ..] dLines) \(i, dLine) -> do
