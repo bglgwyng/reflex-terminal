@@ -2,6 +2,7 @@ module Reflex.Terminal.Host (runTerminal, TerminalContext (..)) where
 
 import Control.Concurrent
 import Control.Exception
+import Control.Monad.Fix
 import Control.Monad.Reader
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
@@ -10,8 +11,10 @@ import Reflex.Host.Headless
 import Reflex.Network
 import Reflex.Terminal.Prelude
 import System.Console.ANSI
+import System.Console.Terminal.Size qualified as TS
 import System.IO
 import System.Posix
+import System.Posix.Signals.Exts
 
 data TerminalContext t = TerminalContext
   { eInput :: Event t Char
@@ -53,19 +56,20 @@ runTerminal guest = do
       showCursor
  where
   app = do
-    Just (height, width) <- getTerminalSize
     setCursorPosition 0 0
 
     runHeadlessApp do
       ePostBuild <- getPostBuild
       (eInput, triggerInput) <- newTriggerEvent
 
+      dSize <- holdTerminalSize
+
       (ddLines, eShutdown :: Event t ()) <-
         runReaderT
           (guest)
           ( TerminalContext
               { eInput
-              , size = (pure height, pure width)
+              , size = dSize
               }
           )
       performEvent_ $
@@ -103,3 +107,33 @@ attributeControl fd = do
   let setAttrs = setTerminalAttributes fd tuiMode Immediately
       unsetAttrs = setTerminalAttributes fd original Immediately
   return (setAttrs, unsetAttrs)
+
+holdTerminalSize ::
+  ( Reflex t
+  , MonadHold t m
+  , TriggerEvent t m
+  , MonadIO m
+  , MonadFix m
+  ) =>
+  m (Dynamic t Int, Dynamic t Int)
+holdTerminalSize = do
+  mSize <- liftIO TS.size
+  let Just (TS.Window height0 width0) = mSize
+
+  (eHeight, triggerHeight) <- newTriggerEvent
+  (eWidth, triggerWidth) <- newTriggerEvent
+  void . liftIO $
+    installHandler
+      sigWINCH
+      ( Catch
+          ( do
+              Just (TS.Window height width) <- TS.size
+              triggerHeight height
+              triggerWidth width
+          )
+      )
+      Nothing
+
+  dHeight <- holdUniqDyn =<< holdDyn height0 eHeight
+  dWidth <- holdUniqDyn =<< holdDyn width0 eWidth
+  pure (dHeight, dWidth)

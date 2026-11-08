@@ -54,6 +54,7 @@ library
     reflex,
     some,
     template-haskell,
+    terminal-size,
     text ^>=2.1.4,
     unix,
     wcwidth,

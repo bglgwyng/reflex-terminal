@@ -9,6 +9,7 @@ import Reflex
 import Reflex.Terminal.Host
 import Reflex.Terminal.Image
 import System.Console.ANSI
+
 import System.Exit (exitFailure)
 import System.IO
 
