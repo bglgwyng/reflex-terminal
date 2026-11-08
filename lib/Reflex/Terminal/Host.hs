@@ -1,22 +1,31 @@
-module Reflex.Terminal.Host (runTerminal) where
+module Reflex.Terminal.Host (runTerminal, TerminalContext (..)) where
 
 import Control.Concurrent
 import Control.Exception
+import Control.Monad.Reader
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Reflex
 import Reflex.Host.Headless
 import Reflex.Network
-import Reflex.Terminal.Image
 import Reflex.Terminal.Prelude
 import System.Console.ANSI
 import System.IO
 import System.Posix
 
+data TerminalContext t = TerminalContext
+  { eInput :: Event t Char
+  , size :: (Dynamic t Int, Dynamic t Int)
+  }
+
 runTerminal ::
-  ( forall t m.
-    (MonadHeadlessApp t m) =>
-    Event t Char -> m (Dynamic t (Image t), Event t ())
+  ( forall t r m.
+    ( MonadHeadlessApp t m
+    , MonadReader r m
+    , HasField "eInput" r (Event t Char)
+    , HasField "size" r (Dynamic t Int, Dynamic t Int)
+    ) =>
+    m (Dynamic t [Dynamic t T.Text], Event t ())
   ) ->
   IO ()
 runTerminal guest = do
@@ -48,32 +57,29 @@ runTerminal guest = do
     setCursorPosition 0 0
 
     runHeadlessApp do
-      let renderLines :: [T.Text] -> IO ()
-          renderLines lines = do
-            case unsnoc lines of
-              Nothing -> forM_ lines $ T.hPutStr stdout
-              Just (rest, last) -> forM_ (rest) (T.hPutStrLn stdout) *> T.hPutStr stdout last
-            setCursorPosition 0 0
-            hFlush stdout
-
       ePostBuild <- getPostBuild
       (eInput, triggerInput) <- newTriggerEvent
 
-      (dImage, eShutdown) <- guest eInput
+      (ddLines, eShutdown :: Event t ()) <-
+        runReaderT
+          (guest)
+          ( TerminalContext
+              { eInput
+              , size = (pure height, pure width)
+              }
+          )
       performEvent_ $
         ePostBuild <&> \_ ->
           void . liftIO . forkIO $ forever do getChar >>= triggerInput
-
-      let ddLines = dImage >>= renderWithoutClipping
 
       void . networkView $ do
         ddLines <&> \dLines -> do
           for_ (zip [0 ..] dLines) \(i, dLine) -> do
             e <-
               networkView $
-                ddLines <&> \line -> liftIO do
+                dLine <&> \line -> liftIO do
                   setCursorPosition i 0
-                  T.hPutStr stdout dLine
+                  T.hPutStr stdout line
             performEvent_ $ e <&> const (liftIO $ hFlush stdout)
 
       pure eShutdown

@@ -22,6 +22,7 @@ common languages
   default-extensions:
     BlockArguments
     DerivingStrategies
+    DuplicateRecordFields
     NoFieldSelectors
     OverloadedRecordDot
     OverloadedStrings
@@ -51,6 +52,7 @@ library
     mtl,
     patch,
     reflex,
+    some,
     template-haskell,
     text ^>=2.1.4,
     unix,
@@ -68,11 +70,13 @@ executable demo
   build-depends:
     ansi-terminal,
     base ^>=4.20.2.0,
+    constraints,
     containers,
     fingertree,
     mtl,
     reflex,
     reflex-terminal,
+    some,
     text ^>=2.1.4,
 
   hs-source-dirs: exe

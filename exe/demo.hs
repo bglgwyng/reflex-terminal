@@ -1,5 +1,8 @@
+{-# LANGUAGE ImpredicativeTypes #-}
+
 import Control.Monad
-import Data.FingerTree qualified as FT
+import Control.Monad.Reader
+import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Reflex
@@ -16,59 +19,30 @@ main = do
   if stdoutSupportsANSI
     then do
       useAlternateScreenBuffer
-      runTerminal \eStdin -> do
-        dText <- accumDyn (\acc c -> (acc <> T.pack [c])) ("." :: T.Text) (eStdin)
-        dText2 <- accumDyn (\acc c -> (acc <> T.pack [c, c])) ("." :: T.Text) (eStdin)
+      runTerminal do
+        eInput <- asks (.eInput)
+        size@(dHeight, dWidth) <- asks (.size)
 
-        let dSpan = Span <$> dText
-            dContainer = horizontal $ replicate 3 $ pure $ vertical $ replicate 3 $ pure $ horizontal (replicate 5 $ pure $ vertical (replicate 5 dSpan))
+        dText <- accumDyn (\acc c -> (acc <> T.pack [c])) ("." :: T.Text) (eInput)
 
-        pure (pure dContainer, void $ ffilter (== 'q') eStdin)
+        let dContainer =
+              box
+                '.'
+                ( vertical $
+                    M.fromList
+                      [
+                        ( 0
+                        , (5, horizontal (M.fromList [(0, (5, fill 'a')), (1, (10, fill 'b')), (2, (10, fill 'c'))]))
+                        )
+                      ,
+                        ( 1
+                        , (5, horizontal (M.fromList [(0, (5, fill 'd')), (1, (10, fill 'e')), (2, (10, fill 'f'))]))
+                        )
+                      ]
+                )
+                size
+        pure (dContainer, void $ ffilter (== 'q') eInput)
       useNormalScreenBuffer
     else do
       T.hPutStrLn stderr "Standard output does not support 'ANSI' escape codes."
       exitFailure
-
-sampleImage :: forall t. (Reflex t) => Image t
-sampleImage =
-  Container
-    @t
-    @Column
-    $ FT.fromList . fmap (pure . ContainerChild)
-    $ [ Container
-          @t
-          @Row
-          $ FT.fromList . fmap (pure . ContainerChild)
-          $ [ Container
-                @t
-                @Column
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ ["0123456789", "Hello"]
-            , Container
-                @t
-                @Column
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ [ Span (T.pack ['A' .. 'Z'])
-                  , "Hello"
-                  , "Bye"
-                  ]
-            ]
-      , Container
-          @t
-          @Row
-          $ FT.fromList . fmap (pure . ContainerChild)
-          $ [ Container
-                @t
-                @Column
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ ["0123456789", "Hello"]
-            , Container
-                @t
-                @Column
-                $ FT.fromList . fmap (pure . ContainerChild)
-                $ [ Span (T.pack ['A' .. 'Z'])
-                  , "Hello"
-                  , "Bye"
-                  ]
-            ]
-      ]
