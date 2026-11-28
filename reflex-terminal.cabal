@@ -45,19 +45,38 @@ library
 
   build-depends:
     ansi-terminal,
+    attoparsec,
     base ^>=4.20.2.0,
+    bytestring,
+    conduit,
+    conduit-extra,
     containers,
     fingertree,
     lens,
     mtl,
     patch,
     reflex,
+    reflex-terminal:terminal-input,
     some,
     template-haskell,
     terminal-size,
     text ^>=2.1.4,
     unix,
     wcwidth,
+
+library terminal-input
+  import: warnings, languages
+  hs-source-dirs: terminal-input
+  exposed-modules:
+    Data.Conduit.Handle.Timeout
+    System.Console.Input
+
+  build-depends:
+    attoparsec,
+    base ^>=4.20.2.0,
+    bytestring,
+    conduit,
+    conduit-extra,
 
 executable demo
   import: warnings, languages
@@ -70,14 +89,35 @@ executable demo
   -- other-extensions:
   build-depends:
     ansi-terminal,
+    attoparsec,
     base ^>=4.20.2.0,
+    bytestring,
+    conduit,
+    conduit-extra,
     constraints,
     containers,
     fingertree,
     mtl,
     reflex,
     reflex-terminal,
+    reflex-terminal:terminal-input,
     some,
     text ^>=2.1.4,
+
+  hs-source-dirs: exe
+
+executable terminal-input-demo
+  import: warnings, languages
+  main-is: terminal-input-demo.hs
+  ghc-options:
+    -threaded
+    -rtsopts
+
+  build-depends:
+    base ^>=4.20.2.0,
+    bytestring,
+    conduit,
+    conduit-extra,
+    reflex-terminal:terminal-input,
 
   hs-source-dirs: exe

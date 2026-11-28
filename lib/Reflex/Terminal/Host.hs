@@ -1,23 +1,30 @@
 module Reflex.Terminal.Host (runTerminal, TerminalContext (..)) where
 
-import Control.Concurrent
+import Conduit
+import Control.Concurrent hiding (yield)
 import Control.Exception
 import Control.Monad.Fix
 import Control.Monad.Reader
+import Data.ByteString.Char8 qualified as BS
+import Data.Conduit.Attoparsec
+import Data.Conduit.Handle.Timeout
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
+import Data.Text.Internal.Lazy (defaultChunkSize)
+import GHC.IO.Handle qualified as IO
 import Reflex
 import Reflex.Host.Headless
 import Reflex.Network
 import Reflex.Terminal.Prelude
 import System.Console.ANSI
+import System.Console.Input
 import System.Console.Terminal.Size qualified as TS
 import System.IO
 import System.Posix
 import System.Posix.Signals.Exts
 
 data TerminalContext t = TerminalContext
-  { eInput :: Event t Char
+  { eInput :: Event t KeyPress
   , size :: (Dynamic t Int, Dynamic t Int)
   }
 
@@ -25,7 +32,7 @@ runTerminal ::
   ( forall t r m.
     ( MonadHeadlessApp t m
     , MonadReader r m
-    , HasField "eInput" r (Event t Char)
+    , HasField "eInput" r (Event t KeyPress)
     , HasField "size" r (Dynamic t Int, Dynamic t Int)
     ) =>
     m (Dynamic t [Dynamic t T.Text], Event t ())
@@ -74,7 +81,12 @@ runTerminal guest = do
           )
       performEvent_ $
         ePostBuild <&> \_ ->
-          void . liftIO . forkIO $ forever do getChar >>= triggerInput
+          void . liftIO . forkIO . runConduit $
+            forever
+              ( sourceHandleWithTimeout stdin defaultChunkSize 10
+                  .| peekForeverE (sinkParser keyPress >>= yield)
+              )
+              .| awaitForever (liftIO . triggerInput)
 
       -- TODO: handle SIGTSTP
       void . networkView $ do

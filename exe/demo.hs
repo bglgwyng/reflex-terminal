@@ -1,7 +1,10 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 
+import Control.Arrow ((>>>))
 import Control.Monad
 import Control.Monad.Reader
+import Data.Functor
+import Data.Functor.Misc (Const2 (..))
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
@@ -9,10 +12,7 @@ import Reflex
 import Reflex.Terminal.Host
 import Reflex.Terminal.Image
 import System.Console.ANSI
-
-import Control.Arrow ((>>>))
-import Data.Functor
-import Data.Functor.Misc (Const2 (Const2))
+import System.Console.Input
 import System.Exit (exitFailure)
 import System.IO
 
@@ -52,7 +52,7 @@ main = do
                         pure (height - childHeight, horizontal (M.fromList [(0, (5, fill 'd')), (1, (10, fill 'e')), (2, (10, fill 'f'))]))
                     )
                   ]
-        pure (dContainer, void $ ffilter (== 'q') eInput)
+        pure (dContainer, void $ ffilter (== KeyPress (KChar 'c') [Ctrl]) eInput)
       useNormalScreenBuffer
     else do
       T.hPutStrLn stderr "Standard output does not support 'ANSI' escape codes."
